@@ -18,10 +18,11 @@
 			pause: !f,      // pause on hover (boolean)
 			loop: !f,       // infinitely looping (boolean)
 			keys: f,        // keyboard shortcuts (boolean)
-			dots: f,        // display dots pagination (boolean)
+			dots: f,        // display ••••o• pagination (boolean)
+			dotsbox: '',    // * Added * place dots outside (jQuery object)
 			arrows: f,      // display prev/next arrows (boolean)
-			prev: '&larr;', // text or html inside prev button (string)
-			next: '&rarr;', // same as for prev option
+			prev: '←',      // text or html inside prev button (string)
+			next: '→',      // same as for prev option
 			fluid: f,       // is it a percentage width? (boolean)
 			starting: f,    // invoke before animation (function with argument)
 			complete: f,    // invoke after animation (function with argument)
@@ -63,11 +64,7 @@
 
 			//  Set the relative widths
 			ul.css({position: 'relative', left: 0, width: (len * 100) + '%'});
-			if(o.fluid) {
-				li.css({'float': 'left', width: (100 / len) + '%'});
-			} else {
-				li.css({'float': 'left', width: (_.max[0]) + 'px'});
-			}
+			li.css({'float': 'left', width: (_.max[0]) + 'px'});
 
 			//  Autoslide
 			o.autoplay && setTimeout(function() {
@@ -115,32 +112,14 @@
 						ul.css(styl);
 						styl['width'] = Math.min(Math.round((width / el.parent().width()) * 100), 100) + '%';
 						el.css(styl);
-						li.css({ width: width + 'px' });
 					}, 50);
 				}).resize();
 			};
 
-			//  Move support
-			if ($.event.special['move'] || $.Event('move')) {
-				el.on('movestart', function(e) {
-					if ((e.distX > e.distY && e.distX < -e.distY) || (e.distX < e.distY && e.distX > -e.distY)) {
-						e.preventDefault();
-					}else{
-						el.data("left", _.ul.offset().left / el.width() * 100);
-					}
-				}).on('move', function(e) {
-					var left = 100 * e.distX / el.width();
-					_.ul.css("left", el.data("left") + left + "%");
-					_.ul.data("left", left);
-				}).on('moveend', function(e) {
-					var left = _.ul.data("left");
-					if (Math.abs(left) > 30){
-						var i = left > 0 ? _.i-1 : _.i+1;
-						if (i < 0 || i >= len) i = _.i;
-						_.to(i);
-					}else{
-						_.to(_.i);
-					}
+			//  Swipe support
+			if ($.event.special['swipe'] || $.Event('swipe')) {
+				el.on('swipeleft swiperight swipeLeft swipeRight', function(e) {
+					e.type.toLowerCase() == 'swipeleft' ? _.next() : _.prev();
 				});
 			};
 
@@ -176,7 +155,14 @@
 
 			if (!ul.queue('fx').length) {
 				//  Handle those pesky dots
-				el.find('.dot').eq(index).addClass('active').siblings().removeClass('active');
+				
+				// dotsbox
+				if (_.o.dotsbox == '') {
+					el.find('.dot').eq(index).addClass('active').siblings().removeClass('active');
+				}
+				else {
+					_.o.dotsbox.find('.dot').eq(index).addClass('active').siblings().removeClass('active');
+				}
 
 				el.animate(obj, speed, easing) && ul.animate($.extend({left: '-' + index + '00%'}, obj), speed, easing, function(data) {
 					_.i = index;
@@ -210,18 +196,23 @@
 
 		//  Create dots and arrows
 		function nav(name, html) {
+			var box = _.el;
 			if (name == 'dot') {
 				html = '<ol class="dots">';
 					$.each(_.li, function(index) {
 						html += '<li class="' + (index == _.i ? name + ' active' : name) + '">' + ++index + '</li>';
 					});
 				html += '</ol>';
+				if (_.o.dotsbox !== '') box = _.o.dotsbox;
+
 			} else {
 				html = '<div class="';
 				html = html + name + 's">' + html + name + ' prev">' + _.o.prev + '</div>' + html + name + ' next">' + _.o.next + '</div></div>';
 			};
 
-			_.el.addClass('has-' + name + 's').append(html).find('.' + name).click(function() {
+			//_.el.addClass('has-' + name + 's').append(html).find('.' + name).click(function() {
+
+			box.addClass('has-' + name + 's').append(html).find('.' + name).click(function() {
 				var me = $(this);
 				me.hasClass('dot') ? _.stop().to(me.index()) : me.hasClass('prev') ? _.prev() : _.next();
 			});
